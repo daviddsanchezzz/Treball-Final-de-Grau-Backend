@@ -13,6 +13,8 @@ router.get('/roles', rolController.obtenerRoles);
 
 router.get('/roles/:id', rolController.obtenerRol);
 
+
+
 router.delete('/roles/:id', rolController.eliminarRol);
 
 

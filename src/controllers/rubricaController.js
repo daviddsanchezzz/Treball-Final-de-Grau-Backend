@@ -437,6 +437,7 @@ const obtenerCriteriosConPuntosDeControlPorRubrica = async (req, res) => {
           nombre: rubrica.rol.nombre,
         }
       },
+      
       criterios: criterios.map(criterio => ({
         criterioId: criterio.id,
         criterioNombre: criterio.nombre,
