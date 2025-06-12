@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Area" ADD COLUMN     "percentatgeFinalAvaluadors" DOUBLE PRECISION NOT NULL DEFAULT 40,
+ADD COLUMN     "percentatgeFinalTutor" DOUBLE PRECISION NOT NULL DEFAULT 60;

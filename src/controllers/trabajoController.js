@@ -1,4 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient, Prisma } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 // Crear un nuevo trabajo
@@ -15,7 +15,6 @@ const crearTrabajo = async (req, res) => {
       return res.status(400).json({ error: 'Rol de tutor no encontrado' });
     }
 
-    console.log(rolTutor)
 
     // Crear el trabajo
     const nuevoTrabajo = await prisma.trabajo.create({
@@ -25,7 +24,6 @@ const crearTrabajo = async (req, res) => {
         estudiante,
         tutor: { connect: { id: tutorId } },
         area: { connect: { id: areaId } },
-        estado: Estado.PENDIENTE
       },
     });
 
@@ -173,7 +171,7 @@ const obtenerTrabajo = async (req, res) => {
 // Editar un trabajo existente
 const editarTrabajo = async (req, res) => {
   const { id } = req.params;
-  const { titulo, descripcion, estudiante, areaId, tutorId } = req.body;
+  const { titulo, descripcion, estudiante, areaId, tutorId, estado } = req.body;
 
   try {
     // Verificamos si el trabajo existe
@@ -212,7 +210,6 @@ const editarTrabajo = async (req, res) => {
 const obtenerNombreEvaluadores = async (req, res) => {
   const { trabajoId } = req.params;
 
-  console.log(trabajoId);
 
   try {
     // Obtener el ID del rol de "Evaluador" desde la tabla roles
@@ -341,8 +338,168 @@ const eliminarEvaluador = async (req, res) => {
   }
 };
 
+const obtenerEstadosDisponibles = (res) => {
+  try {
+    const estados = Prisma.dmmf.datamodel.enums.find(e => e.name === 'Estado').values.map(v => v.name);
+    res.status(200).json({ estados });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'No se pudieron obtener los estados disponibles' });
+  }
+};
+
+const cambiarEstadoTrabajo = async (req, res) => {
+  const { trabajoId } = req.params;
+  const { nuevoEstado } = req.body;
+
+  try {
+    // Validar si el nuevo estado es uno de los definidos en el enum
+    const estadosValidos = Prisma.dmmf.datamodel.enums.find(e => e.name === 'Estado').values.map(v => v.name);
+    if (!estadosValidos.includes(nuevoEstado)) {
+      return res.status(400).json({ error: 'Estado no válido' });
+    }
+
+    // Buscar y actualizar el trabajo
+    const trabajoActualizado = await prisma.trabajo.update({
+      where: { id: parseInt(trabajoId) },
+      data: { estado: nuevoEstado },
+    });
+
+    res.status(200).json({ mensaje: 'Estado actualizado correctamente', trabajo: trabajoActualizado });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al cambiar el estado del trabajo' });
+  }
+};
+
+
+async function actualizarNotaFinalTutor(req, res) {
+  const { nota } = req.body;
+  const { trabajoId } = req.params;
+
+  // Validar que el trabajoId y la nota se han recibido
+  if (!trabajoId || typeof nota !== 'number') {
+    return res.status(400).json({ error: 'Faltan datos necesarios' });
+  }
+
+  try {
+    // Actualizamos el campo 'notaFinalTutor' del trabajo con el trabajoId correspondiente
+    const trabajoActualizado = await prisma.trabajo.update({
+      where: {
+        id: parseInt(trabajoId)
+      },
+      data: {
+        notaFinalTutor: parseFloat(nota)
+      }
+    });
+
+    // Respondemos con el trabajo actualizado
+    return res.status(200).json(trabajoActualizado);
+  } catch (error) {
+    // Manejo de errores
+    console.error(error);
+    return res.status(500).json({ error: 'Error al actualizar la nota final del tutor' });
+  }
+}
+
+async function resetearNotaFinalTutor(req, res) {
+  const { trabajoId } = req.params;
+
+  // Validar que el trabajoId se ha recibido
+  if (!trabajoId) {
+    return res.status(400).json({ error: 'Falta el trabajoId' });
+  }
+
+  try {
+    // Actualizamos el campo 'notaFinalTutor' a null para el trabajo con el trabajoId correspondiente
+    const trabajoActualizado = await prisma.trabajo.update({
+      where: {
+        id: parseInt(trabajoId)
+      },
+      data: {
+        notaFinalTutor: null
+      }
+    });
+
+    // Respondemos con el trabajo actualizado
+    return res.status(200).json(trabajoActualizado);
+  } catch (error) {
+    // Manejo de errores
+    console.error(error);
+    return res.status(500).json({ error: 'Error al resetear la nota final del tutor' });
+  }
+}
+
+async function obtenerNotaFinalTutor(req, res) {
+  const { trabajoId } = req.params;
+
+  // Validar que el trabajoId se ha recibido
+  if (!trabajoId) {
+    return res.status(400).json({ error: 'Falta el trabajoId' });
+  }
+  console.log(trabajoId)
+
+  try {
+    // Obtenemos el trabajo y su notaFinalTutor
+    const trabajo = await prisma.trabajo.findUnique({
+      where: {
+        id: parseInt(trabajoId), 
+      },
+      select: {
+        id: true,
+        titulo: true,
+        notaFinalTutor: true
+      }
+    });
+
+    if (!trabajo) {
+      return res.status(404).json({ error: 'Trabajo no encontrado' });
+    }
+
+    const notaFinalTutor = trabajo.notaFinalTutor !== null ? trabajo.notaFinalTutor : null;
+
+
+    // Respondemos con la nota final del tutor
+    return res.status(200).json({
+      notaFinalTutor: notaFinalTutor
+    });
+  } catch (error) {
+    // Manejo de errores
+    console.error(error);
+    return res.status(500).json({ error: 'Error al obtener la nota final del tutor' });
+  }
+}
+
+async function actualizarNotasTrabajo(req, res) {
+  const { trabajoId } = req.params;
+  const { notaMediaEvaluadores, notaFinalTutor, notaFinalTrabajo } = req.body;
+
+  try {
+    // Actualizamos el trabajo
+    const trabajoActualizado = await prisma.trabajo.update({
+      where: {
+        id: parseInt(trabajoId),
+      },
+      data: {
+        notaMediaEvaluadores: notaMediaEvaluadores,
+        notaFinalTutor: notaFinalTutor,
+        notaFinalTrabajo: notaFinalTrabajo,
+      },
+    });
+
+    res.status(200).json({
+      message: 'Notas actualizadas correctamente.',
+      trabajo: trabajoActualizado,
+    });
+  } catch (error) {
+    console.error('Error al actualizar las notas del trabajo:', error);
+    res.status(500).json({ error: 'Error al actualizar las notas del trabajo.' });
+  }
+}
+
 
   module.exports = { crearTrabajo, asignarEvaluador, obtenerTrabajos, eliminarTrabajo,
-    obtenerTrabajo, editarTrabajo, obtenerNombreEvaluadores, eliminarEvaluador 
+    obtenerTrabajo, editarTrabajo, obtenerNombreEvaluadores, eliminarEvaluador, obtenerEstadosDisponibles,
+    cambiarEstadoTrabajo,actualizarNotaFinalTutor,resetearNotaFinalTutor, obtenerNotaFinalTutor,actualizarNotasTrabajo
   };
   

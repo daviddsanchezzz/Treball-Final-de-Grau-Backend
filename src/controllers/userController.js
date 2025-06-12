@@ -211,7 +211,6 @@ const editarContraseña = async (req, res) => {
   const { usuarioId } = req.params;
   const { contraseñaActual, nuevaContraseña } = req.body;
 
-  console.log('BODY recibido:', req.body);
 
   try {
     // Validar campos requeridos
@@ -308,5 +307,12 @@ const editarUsuario = async (req, res) => {
 };
 
 
+
+
+
+
 module.exports = { crearUsuario, loginUsuario, obtenerTrabajosUsuario, asignarEvaluadorATrabajo,
-   obtenerUsuarios, eliminarUsuario, obtenerUsuario, editarContraseña, editarUsuario};
+   obtenerUsuarios, eliminarUsuario, obtenerUsuario, editarContraseña, editarUsuario };
+
+
+   

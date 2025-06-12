@@ -3,10 +3,18 @@ const prisma = new PrismaClient();
 
 // Crear una nueva área
 const crearArea = async (req, res) => {
-  const { nombre } = req.body;
+  const { nombre, tutor, avaluador } = req.body;
+
 
   try {
-    const nuevaArea = await prisma.area.create({ data: { nombre } });
+    const nuevaArea = await prisma.area.create({
+      data: {
+        nombre,
+        percentatgeFinalTutor: parseFloat(tutor),
+        percentatgeFinalAvaluadors: parseFloat(avaluador),
+      },
+    });
+
     res.status(201).json(nuevaArea);
   } catch (error) {
     console.error(error);
@@ -14,10 +22,10 @@ const crearArea = async (req, res) => {
   }
 };
 
+
 // Editar un área
 const editarArea = async (req, res) => {
-  const { areaId } = req.body;
-  const { nombre } = req.body;
+  const { areaId, nombre, tutor, avaluador } = req.body;
 
   try {
     // Verificar si el área existe
@@ -27,10 +35,14 @@ const editarArea = async (req, res) => {
       return res.status(404).json({ error: 'Área no encontrada' });
     }
 
-    // Actualizar el área
+    // Actualizar el área con nombre y porcentajes
     const areaActualizada = await prisma.area.update({
       where: { id: parseInt(areaId) },
-      data: { nombre },
+      data: { 
+        nombre,
+        percentatgeFinalTutor: parseFloat(tutor),
+        percentatgeFinalAvaluadors: parseFloat(avaluador),
+      },
     });
 
     res.status(200).json(areaActualizada);
@@ -114,6 +126,64 @@ const obtenerDetallesArea = async (req, res) => {
   }
 };
 
+const obtenerPorcentajesArea = async (req, res) => {
+  const { areaId } = req.params;
 
+  try {
+    const area = await prisma.area.findUnique({
+      where: { id: parseInt(areaId) },
+      select: {
+        percentatgeFinalTutor: true,
+        percentatgeFinalAvaluadors: true,
+      },
+    });
 
-module.exports = { editarArea, crearArea, obtenerAreas, eliminarArea, obtenerDetallesArea };
+    if (!area) {
+      return res.status(404).json({ error: 'Área no encontrada' });
+    }
+
+    res.status(200).json(area);
+  } catch (error) {
+    console.error('Error al obtener los porcentajes del área:', error);
+    res.status(500).json({ error: 'Error al obtener los porcentajes del área', detalles: error.message });
+  }
+};
+
+const obtenerPorcentajesAreaPorTrabajo = async (req, res) => {
+  const { trabajoId } = req.params;
+
+  try {
+    // Buscar trabajo junto con su área
+    const trabajo = await prisma.trabajo.findUnique({
+      where: { id: parseInt(trabajoId) },
+      select: {
+        area: {
+          select: {
+            percentatgeFinalTutor: true,
+            percentatgeFinalAvaluadors: true,
+          },
+        },
+      },
+    });
+
+    if (!trabajo) {
+      return res.status(404).json({ error: 'Trabajo no encontrado' });
+    }
+
+    if (!trabajo.area) {
+      return res.status(404).json({ error: 'Área asociada al trabajo no encontrada' });
+    }
+
+    res.status(200).json({
+      percentatgeFinalTutor: trabajo.area.percentatgeFinalTutor,
+      percentatgeFinalAvaluadors: trabajo.area.percentatgeFinalAvaluadors,
+    });
+  } catch (error) {
+    console.error('Error al obtener los porcentajes del área por trabajo:', error);
+    res.status(500).json({ error: 'Error al obtener los porcentajes del área', detalles: error.message });
+  }
+};
+
+module.exports = { editarArea, crearArea, obtenerAreas, eliminarArea, obtenerDetallesArea, obtenerPorcentajesArea,
+  obtenerPorcentajesAreaPorTrabajo
+ };

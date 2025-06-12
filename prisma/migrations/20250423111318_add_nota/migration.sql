@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Nota" ALTER COLUMN "nota" DROP NOT NULL;

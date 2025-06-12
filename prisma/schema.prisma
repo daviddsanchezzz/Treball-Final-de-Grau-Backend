@@ -17,6 +17,10 @@ model Usuario {
   evaluaciones         EvaluacionFinalEvaluador[] @relation("EvaluadorUsuario")
   tutorTrabajos        Trabajo[]               @relation("TutorUsuario")
   notas                Nota[]                  @relation("ProfesorNotas")
+
+  resetToken         String?  // Token para restablecimiento de contraseña
+  resetTokenExpiracion Int?   // Fecha de expiración del token (timestamp)
+
 }
 
 model Roles {
@@ -60,11 +64,14 @@ model EvaluacionFinalEvaluador {
   id           Int     @id @default(autoincrement())
   trabajo      Trabajo @relation(fields: [trabajoId], references: [id], onDelete: Cascade)
   trabajoId    Int
-  evaluador    Usuario @relation("EvaluadorUsuario", fields: [evaluadorId], references: [id])
+  evaluador    Usuario @relation("EvaluadorUsuario", fields: [evaluadorId], references: [id], onDelete: Cascade)
   evaluadorId  Int
   observaciones String?
-  matricula     String?
+  matricula     Boolean
   notaFinal     Float?
+
+  @@unique([trabajoId, evaluadorId])  // Definir la clave compuesta única
+
 }
 
 model EvaluacionFinalTutor {
@@ -75,11 +82,18 @@ model EvaluacionFinalTutor {
   puntoControlId Int
   notaFinalPC    Float?
   observacionPC  String?
+
+  @@unique([trabajoId, puntoControlId])  // Esto asegura que la combinación sea única
+
 }
 
 model Area {
   id      Int           @id @default(autoincrement())
   nombre  String
+  nombreEs  String?
+  nombreEn  String?
+  percentatgeFinalTutor       Float         @default(60)  
+  percentatgeFinalAvaluadors  Float         @default(40)
   trabajos Trabajo[] 
   areaRubrica AreaRubrica[] 
 }
@@ -87,6 +101,8 @@ model Area {
 model Rubricas {
   id     Int      @id @default(autoincrement())
   nombre String
+  nombreEs  String?
+  nombreEn  String?
   rol    Roles    @relation(fields: [rolId], references: [id])
   rolId  Int
   criterios Criterios[] 
@@ -105,6 +121,8 @@ model AreaRubrica {
 model PuntosDeControl {
   id       Int       @id @default(autoincrement())
   nombre   String
+  nombreEs  String?
+  nombreEn  String?
   rubrica  Rubricas  @relation(fields: [rubricaId], references: [id], onDelete: Cascade)
   rubricaId Int
   peso     Float
@@ -115,6 +133,8 @@ model PuntosDeControl {
 model Criterios {
   id        Int       @id @default(autoincrement())
   nombre    String
+  nombreEs  String?
+  nombreEn  String?
   rubrica   Rubricas  @relation(fields: [rubricaId], references: [id])
   rubricaId Int
   criterioPuntoDeControl CriterioPuntoDeControl[] 
@@ -132,13 +152,16 @@ model CriterioPuntoDeControl {
 
 model Nota {
   id         Int                    @id @default(autoincrement())
-  nota       Float
+  nota       Float?
   trabajo    Trabajo                @relation(fields: [trabajoId], references: [id], onDelete: Cascade)
   trabajoId  Int
   profesor   Usuario                @relation("ProfesorNotas", fields: [profesorId], references: [id])
   profesorId Int
   cpc        CriterioPuntoDeControl @relation(fields: [cpcId], references: [id])
   cpcId      Int
+
+  @@unique([trabajoId, profesorId, cpcId])
+
 }
 
 enum Estado {

@@ -14,18 +14,19 @@ const crearRubrica = async (req, res) => {
     });
 
     const pesoPorPunto = 100 / numPuntosDeControl;
+    const puntosDeControlCreados = [];
 
-    const puntosDeControlCreados = await Promise.all(
-      Array.from({ length: numPuntosDeControl }).map((_, index) =>
-        prisma.puntosDeControl.create({
-          data: {
-            nombre: `${index + 1}`,
-            peso: pesoPorPunto,
-            rubrica: { connect: { id: nuevaRubrica.id } },
-          }
-        })
-      )
-    );
+    // Crear los puntos de control uno a uno para asegurar el orden de los IDs
+    for (let i = 0; i < numPuntosDeControl; i++) {
+      const punto = await prisma.puntosDeControl.create({
+        data: {
+          nombre: `${i + 1}`,
+          peso: pesoPorPunto,
+          rubrica: { connect: { id: nuevaRubrica.id } },
+        },
+      });
+      puntosDeControlCreados.push(punto);
+    }
 
     res.status(201).json({ nuevaRubrica, puntosDeControlCreados });
   } catch (error) {
@@ -36,13 +37,15 @@ const crearRubrica = async (req, res) => {
 
 // Crear un nuevo criterio y asociarlo a los puntos de control de la rúbrica
 const crearCriterio = async (req, res) => {
-  const { nombre, rubricaId, pesosPuntosControl } = req.body;
+  const { nombre,nombreEs,nombreEn , rubricaId, pesosPuntosControl } = req.body;
 
   try {
     // Crear el nuevo criterio
     const nuevoCriterio = await prisma.criterios.create({
       data: {
         nombre,
+        nombreEs,
+        nombreEn,
         rubrica: { connect: { id: rubricaId } },
       },
     });
@@ -268,7 +271,6 @@ const actualizarPesoPuntoControl = async (req, res) => {
   };
 
   // Editar una rúbrica existente
-  // Editar una rúbrica existente
 const editarRubrica = async (req, res) => {
   const { rubricaId } = req.params;  // ID de la rúbrica a editar
   const { nombre, rolId } = req.body;  // Nuevos datos para la rúbrica
@@ -305,34 +307,59 @@ const eliminarRubrica = async (req, res) => {
   const { rubricaId } = req.params;
 
   try {
+    const id = parseInt(rubricaId);
+
     // Verificar si la rúbrica existe
     const rubricaExistente = await prisma.rubricas.findUnique({
-      where: { id: parseInt(rubricaId) },
+      where: { id },
     });
 
     if (!rubricaExistente) {
       return res.status(404).json({ error: 'Rúbrica no encontrada' });
     }
 
-    // Eliminar las asignaciones de la rúbrica a áreas
-    await prisma.areaRubrica.deleteMany({
-      where: { rubricaId: parseInt(rubricaId) },
+    // Obtener los criterios relacionados con la rúbrica
+    const criterios = await prisma.criterios.findMany({
+      where: { rubricaId: id },
+      select: { id: true },
     });
 
-    // Eliminar los puntos de control asociados a la rúbrica
+    const criterioIds = criterios.map(c => c.id);
+
+    // Eliminar registros en CriterioPuntoControl que usen estos criterios
+    await prisma.criterioPuntoDeControl.deleteMany({
+      where: {
+        criterioId: { in: criterioIds },
+      },
+    });
+
+    // Eliminar criterios asociados
+    await prisma.criterios.deleteMany({
+      where: { rubricaId: id },
+    });
+
+    // Eliminar puntos de control asociados
     await prisma.puntosDeControl.deleteMany({
-      where: { rubricaId: parseInt(rubricaId) },
+      where: { rubricaId: id },
     });
 
-    // Eliminar la rúbrica
+    // Eliminar la asignación de rúbrica a áreas
+    await prisma.areaRubrica.deleteMany({
+      where: { rubricaId: id },
+    });
+
+    // Finalmente, eliminar la rúbrica
     await prisma.rubricas.delete({
-      where: { id: parseInt(rubricaId) },
+      where: { id },
     });
 
     res.status(200).json({ message: 'Rúbrica eliminada correctamente' });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Error al eliminar la rúbrica', detalles: error.message });
+    res.status(500).json({
+      error: 'Error al eliminar la rúbrica',
+      detalles: error.message,
+    });
   }
 };
 
@@ -441,11 +468,14 @@ const obtenerCriteriosConPuntosDeControlPorRubrica = async (req, res) => {
       criterios: criterios.map(criterio => ({
         criterioId: criterio.id,
         criterioNombre: criterio.nombre,
+        criterioNombreEs: criterio.nombreEs,
+        criterioNombreEn: criterio.nombreEn,
         puntosDeControl: criterio.criterioPuntoDeControl.map(relacion => {
           const punto = puntosDeControl.find(p => p.id === relacion.puntoControl.id);
           return {
             puntoControlId: relacion.puntoControl.id,
             puntoControlNombre: relacion.puntoControl.nombre,
+            cpcId: relacion.id,
             pesoRelacion: relacion.peso,  // Peso de la relación con el criterio
             pesoPuntoControl: punto ? punto.peso : null  // Peso del punto de control en la rúbrica
           };
@@ -463,7 +493,7 @@ const obtenerCriteriosConPuntosDeControlPorRubrica = async (req, res) => {
 
 const editarCriterio = async (req, res) => {
   const { criterioId } = req.params;
-  const { nuevoNombre, nuevosPesosPuntosControl } = req.body;
+  const { nuevoNombre, nuevoNombreEs, nuevoNombreEn, nuevosPesosPuntosControl } = req.body;
 
   try {
     // Verificar si el criterio existe
@@ -480,6 +510,9 @@ const editarCriterio = async (req, res) => {
       where: { id: parseInt(criterioId) },
       data: {
         nombre: nuevoNombre || criterioExistente.nombre,
+        nombreEs: nuevoNombreEs,
+        nombreEn: nuevoNombreEn ,
+
       },
     });
 
