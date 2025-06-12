@@ -18,6 +18,8 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use(cors({ origin: 'https://tfg-david-sanchez.netlify.app/' }));
+
 
 // Rutas principales
 app.get('/', (req, res) => {
@@ -36,3 +38,6 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor escuchando en http://localhost:${PORT}`);
 });
+
+
+
