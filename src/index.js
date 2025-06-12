@@ -16,9 +16,8 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors());
-app.use(express.json());
 app.use(cors({ origin: 'https://tfg-david-sanchez.netlify.app/' }));
+app.use(express.json());
 
 
 // Rutas principales
