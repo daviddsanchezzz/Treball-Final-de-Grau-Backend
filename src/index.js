@@ -16,7 +16,7 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors({ origin: 'https://tfg-david-sanchez.netlify.app/' }));
+app.use(cors({ origin: 'https://tfg-david-sanchez.netlify.app' }));
 app.use(express.json());
 
 
