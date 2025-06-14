@@ -1,12 +1,14 @@
+// Importem PrismaClient per accedir a la base de dades
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-// Crear una nueva área
+
+// Crear una nova àrea
 const crearArea = async (req, res) => {
   const { nombre, tutor, avaluador } = req.body;
 
-
   try {
+    // Creem l'àrea amb el nom i els percentatges proporcionats
     const nuevaArea = await prisma.area.create({
       data: {
         nombre,
@@ -15,27 +17,28 @@ const crearArea = async (req, res) => {
       },
     });
 
+    // Retornem l'àrea creada amb codi 201 (creat correctament)
     res.status(201).json(nuevaArea);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Error al crear el área', detalles: error.message });
+    res.status(500).json({ error: 'Error en crear l\'àrea', detalles: error.message });
   }
 };
 
 
-// Editar un área
+// Editar una àrea existent
 const editarArea = async (req, res) => {
   const { areaId, nombre, tutor, avaluador } = req.body;
 
   try {
-    // Verificar si el área existe
+    // Verifiquem si l'àrea existeix
     const areaExistente = await prisma.area.findUnique({ where: { id: parseInt(areaId) } });
 
     if (!areaExistente) {
-      return res.status(404).json({ error: 'Área no encontrada' });
+      return res.status(404).json({ error: 'Àrea no trobada' });
     }
 
-    // Actualizar el área con nombre y porcentajes
+    // Actualitzem l'àrea amb les dades noves
     const areaActualizada = await prisma.area.update({
       where: { id: parseInt(areaId) },
       data: { 
@@ -48,58 +51,60 @@ const editarArea = async (req, res) => {
     res.status(200).json(areaActualizada);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Error al editar el área', detalles: error.message });
+    res.status(500).json({ error: 'Error en editar l\'àrea', detalles: error.message });
   }
 };
 
 
-// Obtener todas las áreas
+// Obtenir totes les àrees
 const obtenerAreas = async (req, res) => {
   try {
-    const areas = await prisma.area.findMany();
+    const areas = await prisma.area.findMany();  // Obtenim totes les àrees de la base de dades
     res.status(200).json(areas);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Error al obtener las áreas', detalles: error.message });
+    res.status(500).json({ error: 'Error en obtenir les àrees', detalles: error.message });
   }
 };
 
-// Eliminar un área
+
+// Eliminar una àrea
 const eliminarArea = async (req, res) => {
   const { areaId } = req.params;
 
   try {
-    // Verificar si el área existe
+    // Comprovem si l'àrea existeix
     const areaExistente = await prisma.area.findUnique({ where: { id: parseInt(areaId) } });
 
     if (!areaExistente) {
-      return res.status(404).json({ error: 'Área no encontrada' });
+      return res.status(404).json({ error: 'Àrea no trobada' });
     }
 
-    // Eliminar el área
+    // Eliminem l'àrea
     await prisma.area.delete({ where: { id: parseInt(areaId) } });
 
-    res.status(200).json({ message: 'Área eliminada correctamente' });
+    res.status(200).json({ message: 'Àrea eliminada correctament' });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Error al eliminar el área', detalles: error.message });
+    res.status(500).json({ error: 'Error en eliminar l\'àrea', detalles: error.message });
   }
 };
 
-// Obtener los detalles de un área y sus rúbricas con los roles
+
+// Obtenir els detalls d'una àrea i les seves rúbriques amb els rols associats
 const obtenerDetallesArea = async (req, res) => {
-  const { id } = req.params;  // El ID del área desde la URL
+  const { id } = req.params;  // L'ID de l'àrea des de la URL
 
   try {
-    // Recuperar el área con sus rúbricas asociadas
+    // Busquem l'àrea i les seves rúbriques, incloent el rol de cada rúbrica
     const area = await prisma.area.findUnique({
-      where: { id: parseInt(id) },  // Buscar el área por su ID
+      where: { id: parseInt(id) },
       include: {
         areaRubrica: {
           include: {
             rubrica: {
               include: {
-                rol: true, // Incluir el rol asociado a la rúbrica
+                rol: true,
               },
             },
           },
@@ -108,10 +113,10 @@ const obtenerDetallesArea = async (req, res) => {
     });
 
     if (!area) {
-      return res.status(404).json({ message: 'Área no encontrada' });
+      return res.status(404).json({ message: 'Àrea no trobada' });
     }
 
-    // Extraer las rúbricas y los roles asociados
+    // Transformem les dades de les rúbriques per retornar-les amb els noms de rol
     const rubricas = area.areaRubrica.map((item) => ({
       rubrica: item.rubrica.nombre,
       rubricaId: item.rubrica.id,
@@ -121,15 +126,18 @@ const obtenerDetallesArea = async (req, res) => {
 
     res.status(200).json({ area: area.nombre, rubricas });
   } catch (error) {
-    console.error('Error al obtener los detalles del área:', error);
-    res.status(500).json({ error: 'Error al obtener los detalles del área', detalles: error.message });
+    console.error('Error en obtenir els detalls de l\'àrea:', error);
+    res.status(500).json({ error: 'Error en obtenir els detalls de l\'àrea', detalles: error.message });
   }
 };
 
+
+// Obtenir els percentatges finals d’una àrea (tutor i avaluadors)
 const obtenerPorcentajesArea = async (req, res) => {
   const { areaId } = req.params;
 
   try {
+    // Cerquem només els percentatges de l'àrea
     const area = await prisma.area.findUnique({
       where: { id: parseInt(areaId) },
       select: {
@@ -139,21 +147,23 @@ const obtenerPorcentajesArea = async (req, res) => {
     });
 
     if (!area) {
-      return res.status(404).json({ error: 'Área no encontrada' });
+      return res.status(404).json({ error: 'Àrea no trobada' });
     }
 
     res.status(200).json(area);
   } catch (error) {
-    console.error('Error al obtener los porcentajes del área:', error);
-    res.status(500).json({ error: 'Error al obtener los porcentajes del área', detalles: error.message });
+    console.error('Error en obtenir els percentatges de l\'àrea:', error);
+    res.status(500).json({ error: 'Error en obtenir els percentatges de l\'àrea', detalles: error.message });
   }
 };
 
+
+// Obtenir els percentatges d'una àrea a partir de l'ID del treball associat
 const obtenerPorcentajesAreaPorTrabajo = async (req, res) => {
   const { trabajoId } = req.params;
 
   try {
-    // Buscar trabajo junto con su área
+    // Cerquem el treball amb la seva àrea associada
     const trabajo = await prisma.trabajo.findUnique({
       where: { id: parseInt(trabajoId) },
       select: {
@@ -167,23 +177,32 @@ const obtenerPorcentajesAreaPorTrabajo = async (req, res) => {
     });
 
     if (!trabajo) {
-      return res.status(404).json({ error: 'Trabajo no encontrado' });
+      return res.status(404).json({ error: 'Treball no trobat' });
     }
 
     if (!trabajo.area) {
-      return res.status(404).json({ error: 'Área asociada al trabajo no encontrada' });
+      return res.status(404).json({ error: 'Àrea associada no trobada' });
     }
 
+    // Retornem els percentatges finals de tutor i avaluadors
     res.status(200).json({
       percentatgeFinalTutor: trabajo.area.percentatgeFinalTutor,
       percentatgeFinalAvaluadors: trabajo.area.percentatgeFinalAvaluadors,
     });
   } catch (error) {
-    console.error('Error al obtener los porcentajes del área por trabajo:', error);
-    res.status(500).json({ error: 'Error al obtener los porcentajes del área', detalles: error.message });
+    console.error('Error en obtenir els percentatges per treball:', error);
+    res.status(500).json({ error: 'Error en obtenir els percentatges de l\'àrea', detalles: error.message });
   }
 };
 
-module.exports = { editarArea, crearArea, obtenerAreas, eliminarArea, obtenerDetallesArea, obtenerPorcentajesArea,
+
+// Exportem totes les funcions per poder utilitzar-les en altres fitxers (com les rutes)
+module.exports = { 
+  editarArea, 
+  crearArea, 
+  obtenerAreas, 
+  eliminarArea, 
+  obtenerDetallesArea, 
+  obtenerPorcentajesArea,
   obtenerPorcentajesAreaPorTrabajo
- };
+};
