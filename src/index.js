@@ -9,9 +9,6 @@ const rubricaRoutes = require('./routes/rubricaRoutes');
 const trabajoRoutes = require('./routes/trabajoRoutes');
 const userRoutes = require('./routes/userRoutes');
 
-const authMiddleware = require('./middleware/authMiddleware');
-const checkRole = require('./middleware/checkRole');
-
 dotenv.config();
 
 const app = express();
