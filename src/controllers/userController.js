@@ -48,8 +48,8 @@ const loginUsuario = async (req, res) => {
       return res.status(400).json({ error: 'Contraseña incorrecta' });
     }
 
-    // Preparar datos para el JWT
-    const data = { id: usuario.id, email: usuario.email, nombre: usuario.nombre , esAdmin: usuario.esAdmin}; // Incluye el nombre
+    // Preparar dades per el JWT
+    const data = { id: usuario.id, email: usuario.email, nombre: usuario.nombre , esAdmin: usuario.esAdmin}; 
 
     // Generar el token JWT
     const token = jwt.sign(data, process.env.JWT_SECRET, { expiresIn: '1h' });
